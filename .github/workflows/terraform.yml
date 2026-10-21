@@ -1,0 +1,149 @@
+name: terraform
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: terraform-prod
+  cancel-in-progress: false
+
+env:
+  TF_VERSION: "1.16.5"
+  TF_IN_AUTOMATION: "true"
+  TF_INPUT: "false"
+  AWS_REGION: sa-east-1
+
+jobs:
+  plan:
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+      pull-requests: write
+    defaults:
+      run:
+        working-directory: envs/prod
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: fmt
+        working-directory: .
+        run: terraform fmt -recursive -check
+
+      - name: validate bootstrap
+        working-directory: bootstrap
+        run: |
+          terraform init -backend=false
+          terraform validate
+
+      - uses: terraform-linters/setup-tflint@v6
+        with:
+          tflint_version: v0.64.0
+
+      - name: tflint
+        working-directory: .
+        continue-on-error: true
+        run: |
+          tflint --init
+          tflint --chdir=envs/prod --config="$GITHUB_WORKSPACE/.tflint.hcl"
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_PLAN_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Write backend.hcl and terraform.tfvars
+        env:
+          TF_BACKEND_HCL: ${{ vars.TF_BACKEND_HCL }}
+          TF_VARS_CONTENT: ${{ vars.TF_VARS }}
+        run: |
+          printf '%s\n' "$TF_BACKEND_HCL" > backend.hcl
+          printf '%s\n' "$TF_VARS_CONTENT" > terraform.tfvars
+
+      - name: init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: validate
+        run: terraform validate
+
+      - name: plan
+        id: plan
+        run: |
+          set +e
+          terraform plan -no-color -detailed-exitcode -out=tfplan > plan.txt 2>&1
+          code=$?
+          cat plan.txt
+          echo "exitcode=$code" >> "$GITHUB_OUTPUT"
+          [ "$code" -eq 1 ] && exit 1 || exit 0
+
+      - name: Comment plan on the PR
+        uses: actions/github-script@v9
+        env:
+          PLAN_EXIT: ${{ steps.plan.outputs.exitcode }}
+        with:
+          script: |
+            const fs = require('fs');
+            const marker = '<!-- terraform-plan-prod -->';
+            let plan = fs.readFileSync('envs/prod/plan.txt', 'utf8');
+            const max = 60000;
+            if (plan.length > max) plan = '...(truncado)...\n' + plan.slice(-max);
+            const status = process.env.PLAN_EXIT === '2' ? 'changes' : 'no changes';
+            const body = `${marker}\n### terraform plan (prod): ${status}\n\n<details><summary>Show plan</summary>\n\n\`\`\`\n${plan}\n\`\`\`\n</details>\n\n_Commit ${context.sha.substring(0, 7)}_`;
+            const { data: comments } = await github.rest.issues.listComments({
+              ...context.repo, issue_number: context.issue.number, per_page: 100,
+            });
+            const existing = comments.find(c => c.body && c.body.includes(marker));
+            if (existing) {
+              await github.rest.issues.updateComment({ ...context.repo, comment_id: existing.id, body });
+            } else {
+              await github.rest.issues.createComment({ ...context.repo, issue_number: context.issue.number, body });
+            }
+
+  apply:
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    environment: production
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: envs/prod
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: hashicorp/setup-terraform@v4
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - uses: aws-actions/configure-aws-credentials@v6
+        with:
+          role-to-assume: ${{ secrets.AWS_APPLY_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Write backend.hcl and terraform.tfvars
+        env:
+          TF_BACKEND_HCL: ${{ vars.TF_BACKEND_HCL }}
+          TF_VARS_CONTENT: ${{ vars.TF_VARS }}
+        run: |
+          printf '%s\n' "$TF_BACKEND_HCL" > backend.hcl
+          printf '%s\n' "$TF_VARS_CONTENT" > terraform.tfvars
+
+      - name: init
+        run: terraform init -backend-config=backend.hcl
+
+      - name: apply
+        run: terraform apply -auto-approve -no-color

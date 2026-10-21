@@ -1,0 +1,15 @@
+github_owner = "my-org"
+
+web_url = "https://energia.com.br"
+
+api_domain        = "api.energia.com.br"
+api_origin_domain = "api-origin.energia.com.br"
+
+cognito_domain_prefix = "energia-admin"
+web_callback_urls     = ["https://energia.com.br/api/auth/callback/cognito"]
+web_logout_urls       = ["https://energia.com.br/"]
+
+ses_domain = "energia.com.br"
+
+alarm_email = "alerts@energia.com.br"
+
