@@ -355,7 +355,23 @@ terraform fmt -recursive -check
 (cd bootstrap && terraform init -backend=false && terraform validate)
 (cd envs/prod && terraform init -backend=false && terraform validate)
 tflint --init && tflint --chdir=envs/prod --config="$PWD/.tflint.hcl"
+trivy config --ignorefile .trivyignore.yaml .
 ```
+
+## Pipeline
+
+`.github/workflows/ci.yml` runs on every push, pull request and manual run:
+
+| Job | What it does |
+|---|---|
+| Lint | `terraform fmt -check` and tflint (AWS ruleset) on `bootstrap` and `envs/prod` |
+| Validate | `terraform validate` on `bootstrap` and `envs/prod` |
+| Security scan | Trivy over the Terraform code (HIGH/CRITICAL) and a secret scan |
+| Plan | `terraform plan` for `envs/prod`; on pull requests the plan is posted as a comment |
+| Apply to production | On `main`, when the plan has changes: waits for approval in the `production` environment and applies exactly the reviewed plan file |
+
+Plan and apply only run once the `TF_BACKEND_HCL` variable exists. Accepted Trivy findings live
+in `.trivyignore.yaml`, each with the reason it is accepted.
 
 Providers: `hashicorp/aws ~> 6.0` and `hashicorp/random ~> 3.0`; the exact versions (AWS
 6.67.0, random 3.9.1) live in the `.terraform.lock.hcl` files, which are committed. To update:

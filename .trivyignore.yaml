@@ -1,0 +1,31 @@
+misconfigurations:
+  - id: AWS-0132
+    paths:
+      - bootstrap/main.tf
+      - modules/lake/main.tf
+    statement: Buckets use SSE-S3 encryption; a customer managed KMS key adds cost without a real gain for public ONS data and the Terraform state.
+  - id: AWS-0104
+    paths:
+      - modules/airflow/main.tf
+      - modules/api/main.tf
+    statement: There is no NAT gateway; the Airflow instance and the API tasks reach ONS, Cognito, SES and ECR directly over the internet.
+  - id: AWS-0053
+    paths:
+      - modules/api/main.tf
+    statement: The ALB is the CloudFront origin; it only accepts the CloudFront managed prefix list and requests carrying the X-Origin-Verify secret.
+  - id: AWS-0054
+    paths:
+      - modules/api/main.tf
+    statement: The HTTP listener only exists when api_origin_domain is empty, a test-only mode the plan warns about through a check block.
+  - id: AWS-0011
+    paths:
+      - modules/cdn/main.tf
+    statement: WAF is deferred for cost reasons; the API only serves public, cached, read-only data plus rate-limited newsletter and authenticated admin routes.
+  - id: AWS-0031
+    paths:
+      - modules/ecr/main.tf
+    statement: The deploy pipeline moves the latest tag to the approved commit SHA; every image is also pushed with an immutable SHA tag.
+  - id: AWS-0095
+    paths:
+      - modules/observability/main.tf
+    statement: CloudWatch alarms cannot publish to a topic encrypted with the AWS managed SNS key, and alarm messages are not sensitive.

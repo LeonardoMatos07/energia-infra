@@ -20,6 +20,7 @@ locals {
     ]
     infra_plan = [
       "repo:${var.github_owner}/${var.infra_repository}:pull_request",
+      "repo:${var.github_owner}/${var.infra_repository}:ref:refs/heads/main",
     ]
     infra_apply = [
       "repo:${var.github_owner}/${var.infra_repository}:environment:${var.production_environment}",
