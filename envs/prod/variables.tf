@@ -78,13 +78,13 @@ variable "db_name" {
 }
 
 variable "database_url_scheme" {
-  description = "SQLAlchemy scheme for DATABASE_URL (must match the driver used by energia-api)."
+  description = "SQLAlchemy scheme for DATABASE_URL (must match the driver used by energy-api)."
   type        = string
   default     = "postgresql+psycopg"
 }
 
 variable "api_image_tag" {
-  description = "energia-api image tag used by the service and the migration task. CI moves \"latest\"; pin a SHA here to roll back."
+  description = "energy-api image tag used by the service and the migration task. CI moves \"latest\"; pin a SHA here to roll back."
   type        = string
   default     = "latest"
 }
@@ -142,7 +142,7 @@ variable "log_retention_days" {
 }
 
 variable "github_owner" {
-  description = "GitHub organisation or user owning energia-api, energia-data and energia-infra."
+  description = "GitHub organisation or user owning energy-api, energy-data and energy-infra."
   type        = string
 }
 

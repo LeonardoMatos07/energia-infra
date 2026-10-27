@@ -1,18 +1,23 @@
-# energia-infra
+# energy-infra
 
 Terraform for the AWS infrastructure (`sa-east-1`, single account, `prod` environment) of the
 energy data platform. Phase 1: the public wind and solar curtailment monitor.
 
-The contract between the repositories is in `energia-api/docs/phase1-contract.md`. This
-repository creates the infrastructure; the database schema belongs to `energia-api` (Alembic)
-and the pipeline to `energia-data`. The portal (`energia-web`) runs on **Vercel**, outside
+The contract between the repositories is in `energy-api/docs/phase1-contract.md`. This
+repository creates the infrastructure; the database schema belongs to `energy-api` (Alembic)
+and the pipeline to `energy-data`. The portal (`energy-web`) runs on **Vercel**, outside
 Terraform.
+
+> **Naming.** The GitHub repositories are named `energy-*`. AWS resources that already exist
+> keep the original `energia` prefix (ECR repositories, Cognito resource server and the
+> `energia-api/admin` scope, `/opt/energia-data` on the Airflow host, `energia-prod-*`) so that
+> renaming the repositories does not force Terraform to replace production resources.
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  user([Visitor]) --> vercel[energia-web<br/>Vercel]
+  user([Visitor]) --> vercel[energy-web<br/>Vercel]
   admin([Admin]) --> vercel
   vercel -- "server-side fetch" --> cf
   vercel -- "OAuth code + PKCE" --> cognito[Cognito<br/>user pool + hosted UI]
@@ -21,7 +26,7 @@ flowchart LR
     cf[CloudFront<br/>/v1/* cache] -- "HTTPS + X-Origin-Verify" --> alb[ALB]
     subgraph vpc [VPC 10.20.0.0/16]
       subgraph pub [Public subnets, 2 AZs]
-        alb --> ecs[ECS Fargate<br/>energia-api]
+        alb --> ecs[ECS Fargate<br/>energy-api]
         ec2[EC2 t3.large<br/>Airflow docker-compose]
       end
       subgraph priv [Private subnets, 2 AZs]
@@ -153,7 +158,7 @@ After the apply, create the `api_domain → CloudFront` and `api_origin_domain �
 
 ### 4. API migration
 
-It needs the `energia-api:latest` image in ECR (first push from the `energia-api` CI, or a
+It needs the `energia-api:latest` image in ECR (first push from the `energy-api` CI, or a
 manual one).
 
 ```bash
@@ -189,7 +194,7 @@ master user. It creates:
   automatically (default privileges); writing to a new table must be granted in the SQL.
 - `energia_data`: `SELECT, INSERT, UPDATE, DELETE` only on `plant`, `plant_monthly_curtailment`,
   `state_monthly_curtailment`, `subsystem_monthly_curtailment` and `load_run` (contract, "How
-  energia-data writes").
+  energy-data writes").
 
 The script is idempotent. After it, the API starts (`DATABASE_URL` uses `energia_api`): if the
 service was already retrying, force a deployment with
@@ -210,7 +215,7 @@ aws cognito-idp admin-add-user-to-group --user-pool-id "$POOL" \
 The person gets a temporary password by e-mail and, on the first sign-in, changes it and sets up
 the authenticator app (mandatory MFA).
 
-### 7. Airflow (energia-data) on EC2
+### 7. Airflow (energy-data) on EC2
 
 `user_data` installs Docker, Compose (v5.6.0, with checksum), git, jq and the CloudWatch agent,
 creates `/opt/energia-data` (owned by `ec2-user`) and installs the `energia-render-env`
@@ -229,27 +234,22 @@ The instance role reads exactly these three secrets and this parameter. The lake
 instance profile (no static keys; IMDSv2 with hop limit 2 so the containers reach the
 credentials). To rewrite `.env` without rebooting: `sudo /usr/local/bin/render-airflow-env.sh`.
 
-**Repository clone (once).** `energia-data` is private: create a read-only *deploy key* on
-GitHub and open a session on the instance. Register `~/.ssh/energia-data.pub` as the deploy key.
-The directory already exists (with `.env` and `logs/`), so the clone happens in place:
+**Repository clone (once).** `energy-data` is public, so the instance clones it over HTTPS
+with no deploy key. Open a session on the instance; the directory already exists (with `.env`
+and `logs/`), so the clone happens in place:
 
 ```bash
 aws ssm start-session --target $(terraform output -raw airflow_instance_id)
 sudo su - ec2-user
-ssh-keygen -t ed25519 -f ~/.ssh/energia-data -N ""
-cat >> ~/.ssh/config <<'EOF'
-Host github.com
-  IdentityFile ~/.ssh/energia-data
-EOF
 cd /opt/energia-data
 git init -b main
-git remote add origin git@github.com:<org>/energia-data.git
+git remote add origin https://github.com/<owner>/energy-data.git
 git fetch origin main && git checkout -f -t origin/main
 ```
 
-`.env` and `logs/` must be in the `energia-data` `.gitignore`.
+`.env` and `logs/` must be in the `energy-data` `.gitignore`.
 
-**Deployment from the energia-data CI:**
+**Deployment from the energy-data CI:**
 
 ```bash
 aws ssm send-command --document-name AWS-RunShellScript \
@@ -259,7 +259,7 @@ aws ssm send-command --document-name AWS-RunShellScript \
 
 SSM runs the command as `root`; `.env` belongs to `ec2-user` with mode 600, readable by root.
 
-`deploy.sh` (from `energia-data`) reads `.env` and runs
+`deploy.sh` (from `energy-data`) reads `.env` and runs
 `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`. Airflow must expose its
 UI only on `127.0.0.1:8080` on the host and write task logs to `/opt/energia-data/logs`
 (`./logs` in the compose file), from where the CloudWatch agent ships
@@ -283,9 +283,9 @@ repository that deploys. The ARNs are in the `github_role_arns` output.
 
 | Repository | Secrets | Variables |
 |---|---|---|
-| `energia-infra` | `AWS_PLAN_ROLE_ARN` (`infra_plan`), `AWS_APPLY_ROLE_ARN` (`infra_apply`, in the `production` environment) | `TF_BACKEND_HCL` (contents of `backend.hcl`), `TF_VARS` (contents of `terraform.tfvars`; keep secrets out of it) |
-| `energia-api` | `AWS_ROLE_ARN` (`api`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-api`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_MIGRATION_TASK_DEFINITION`, `ECS_SUBNETS`, `ECS_SECURITY_GROUP` (`ecs` output) |
-| `energia-data` | `AWS_ROLE_ARN` (`data`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-data`, `AIRFLOW_INSTANCE_ID` |
+| `energy-infra` | `AWS_PLAN_ROLE_ARN` (`infra_plan`), `AWS_APPLY_ROLE_ARN` (`infra_apply`, in the `production` environment) | `TF_BACKEND_HCL` (contents of `backend.hcl`), `TF_VARS` (contents of `terraform.tfvars`; keep secrets out of it) |
+| `energy-api` | `AWS_ROLE_ARN` (`api`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-api`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_MIGRATION_TASK_DEFINITION`, `ECS_SUBNETS`, `ECS_SECURITY_GROUP` (`ecs` output) |
+| `energy-data` | `AWS_ROLE_ARN` (`data`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-data`, `AIRFLOW_INSTANCE_ID` |
 
 The roles accept the `main` branch or the `production` environment (the token `sub` changes when
 the job uses an environment). Expected API deployment flow: build → push `:<sha>` and `:latest`
@@ -294,7 +294,7 @@ the job uses an environment). Expected API deployment flow: build → push `:<sh
 
 If the account already has the GitHub OIDC provider, set `create_github_oidc_provider = false`.
 
-### 9. Vercel (energia-web)
+### 9. Vercel (energy-web)
 
 | Variable | Value |
 |---|---|
