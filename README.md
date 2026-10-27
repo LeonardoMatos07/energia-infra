@@ -13,6 +13,8 @@ Terraform.
 > `energia-api/admin` scope, `/opt/energia-data` on the Airflow host, `energia-prod-*`) so that
 > renaming the repositories does not force Terraform to replace production resources.
 
+Design decisions shared by the four repositories are recorded as [ADRs](https://github.com/LeonardoMatos07/energy-api/tree/main/docs/adr).
+
 ## Architecture
 
 ```mermaid
