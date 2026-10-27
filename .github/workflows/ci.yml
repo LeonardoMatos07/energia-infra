@@ -16,6 +16,7 @@ env:
   TF_VERSION: "1.16.5"
   TFLINT_VERSION: "v0.64.0"
   TRIVY_VERSION: "v0.75.0"
+  UV_VERSION: "0.12.23"
   TF_IN_AUTOMATION: "true"
   TF_INPUT: "false"
 
@@ -82,9 +83,55 @@ jobs:
           scanners: secret
           exit-code: "1"
 
+  database-permissions:
+    name: Database permissions
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: energia
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      PGHOST: localhost
+      PGPORT: "5432"
+      PGDATABASE: energia
+      ADMIN_USER: postgres
+      ADMIN_PASSWORD: postgres
+    steps:
+      - uses: actions/checkout@v7.0.1
+      - name: Check out energia-api (the schema the users have to work with)
+        uses: actions/checkout@v7.0.1
+        with:
+          repository: LeonardoMatos07/energia-api
+          ref: main
+          path: energia-api
+      - uses: astral-sh/setup-uv@v10.2.0
+        with:
+          version: ${{ env.UV_VERSION }}
+      - name: alembic upgrade head
+        working-directory: energia-api
+        env:
+          DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/energia
+        run: |
+          uv sync --frozen
+          uv run alembic upgrade head
+      - name: Database users can write what they own and nothing else
+        run: |
+          command -v psql >/dev/null || sudo apt-get install -y --no-install-recommends postgresql-client
+          bash scripts/db-permissions/check.sh
+
   plan:
     name: Plan
-    needs: [lint, validate, security-scan]
+    needs: [lint, validate, security-scan, database-permissions]
     if: vars.TF_BACKEND_HCL != ''
     runs-on: ubuntu-latest
     permissions:

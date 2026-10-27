@@ -191,14 +191,33 @@ The script reads the secrets with your credentials, opens an SSM port forward th
 Airflow EC2 instance to RDS (`localhost:15432`) and runs `scripts/create-db-users.sql` as the
 master user. It creates:
 
-- `energia_api`: `SELECT` on every table; `INSERT, UPDATE, DELETE` only on `monthly_report`,
-  `newsletter_subscriber`, `organization` and `app_user`. New tables become readable
-  automatically (default privileges); writing to a new table must be granted in the SQL.
+- `energia_api`: `SELECT` on every table; `INSERT, UPDATE, DELETE` only on the tables the API
+  writes: `monthly_report`, `newsletter_subscriber`, `organization`, `app_user` (the last two are
+  not used by the code yet), `member`, `member_token`, `member_session` (sign-up, e-mail code,
+  login), `email_dispatch` (monthly sends) and `usage_event` (usage log). It also gets `USAGE` on every sequence. New tables become
+  readable automatically (default privileges); writing to a new table must be granted in the SQL.
 - `energia_data`: `SELECT, INSERT, UPDATE, DELETE` only on `plant`, `plant_monthly_curtailment`,
-  `state_monthly_curtailment`, `subsystem_monthly_curtailment` and `load_run` (contract, "How
-  energy-data writes").
+  `state_monthly_curtailment`, `subsystem_monthly_curtailment`, `hourly_curtailment` and
+  `load_run` (contract, "How energy-data writes"), `USAGE` on the `load_run` sequence and the
+  `TEMPORARY` privilege on the database, because every load is staged in a temporary table. It
+  cannot even read the API tables (members, sessions, usage log).
 
-The script is idempotent. After it, the API starts (`DATABASE_URL` uses `energia_api`): if the
+The script is idempotent and convergent: it resets the write privileges of `energia_api` and every
+privilege of `energia_data` before granting them, so a table removed from the list loses access
+when the script is reapplied.
+
+**Guard against drift.** The `database-permissions` job of the CI starts a Postgres 16, applies
+the `energia-api` migrations (`main`), runs `create-db-users.sql` twice and then
+`scripts/db-permissions/check.sh`: it connects as `energia_api` and as `energia_data`, writes,
+updates and deletes a row in each table they own inside a transaction that is rolled back, and
+checks that the forbidden tables are refused. It fails when a table appears that
+`scripts/db-permissions/classify.sql` does not know, so a new migration cannot reach production
+without a decision about who may write to it. The `plan` job waits for it. To run it locally
+against any Postgres with the `energia-api` schema:
+`PGHOST=... PGPORT=... PGDATABASE=... ADMIN_USER=... ADMIN_PASSWORD=... bash scripts/db-permissions/check.sh`.
+
+Run it again after every `energia-api` release that adds a table: the commands are the same as the
+first time (below). After it, the API starts (`DATABASE_URL` uses `energia_api`): if the
 service was already retrying, force a deployment with
 `aws ecs update-service --cluster energia-prod --service energia-prod-api --force-new-deployment`.
 
