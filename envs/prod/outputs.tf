@@ -33,7 +33,7 @@ output "dns_records" {
 }
 
 output "cognito" {
-  description = "Cognito values for energy-api / energy-web."
+  description = "Cognito values for spillway-api / spillway-web."
   value = {
     region            = var.region
     user_pool_id      = module.auth.user_pool_id
@@ -77,7 +77,7 @@ output "database" {
 }
 
 output "ecs" {
-  description = "Values for the energy-api deploy workflow (GitHub variables)."
+  description = "Values for the spillway-api deploy workflow (GitHub variables)."
   value = {
     cluster                   = module.api.cluster_name
     service                   = module.api.service_name
