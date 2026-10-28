@@ -1,6 +1,6 @@
 -- Run as the admin user. Every table in the schema has to be classified here, so adding a table in
 -- an energia-api migration fails the check until someone decides who may write to it and updates
--- create-db-users.sql, api-writes.sql or data-writes.sql accordingly.
+-- create-db-users.sql, api-writes.sql, data-writes.sql or forecast-writes.sql accordingly.
 \set ON_ERROR_STOP on
 
 DO $$
@@ -10,6 +10,7 @@ DECLARE
                                'usage_event'];
   data_writes  text[] := ARRAY['plant', 'plant_monthly_curtailment', 'state_monthly_curtailment',
                                'subsystem_monthly_curtailment', 'hourly_curtailment', 'load_run'];
+  forecast_writes text[] := ARRAY['forecast_model', 'forecast_run', 'forecast_hourly'];
   ignored      text[] := ARRAY['alembic_version'];
   unclassified text;
   missing      text;
@@ -17,13 +18,13 @@ BEGIN
   SELECT string_agg(tablename, ', ' ORDER BY tablename) INTO unclassified
   FROM pg_tables
   WHERE schemaname = 'public'
-    AND tablename <> ALL (api_writes || data_writes || ignored);
+    AND tablename <> ALL (api_writes || data_writes || forecast_writes || ignored);
   IF unclassified IS NOT NULL THEN
     RAISE EXCEPTION 'tables without a database-user decision: %. Grant them in create-db-users.sql and add them to classify.sql and the matching *-writes.sql.', unclassified;
   END IF;
 
   SELECT string_agg(t, ', ') INTO missing
-  FROM unnest(api_writes || data_writes) AS t
+  FROM unnest(api_writes || data_writes || forecast_writes) AS t
   WHERE NOT EXISTS (SELECT 1 FROM pg_tables WHERE schemaname = 'public' AND tablename = t);
   IF missing IS NOT NULL THEN
     RAISE EXCEPTION 'classified tables that do not exist: %', missing;

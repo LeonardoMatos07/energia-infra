@@ -14,6 +14,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-postgres}"
 USERS_SQL="${USERS_SQL:-$DIR/../create-db-users.sql}"
 API_PASSWORD="api-$(date +%s%N)"
 DATA_PASSWORD="data-$(date +%s%N)"
+FORECAST_PASSWORD="forecast-$(date +%s%N)"
 
 run_as() {
   local user="$1" password="$2"
@@ -24,6 +25,7 @@ run_as() {
 create_users() {
   run_as "$ADMIN_USER" "$ADMIN_PASSWORD" \
     -v api_password="$API_PASSWORD" -v data_password="$DATA_PASSWORD" \
+    -v forecast_password="$FORECAST_PASSWORD" \
     -f "$USERS_SQL" >/dev/null
 }
 
@@ -37,4 +39,5 @@ run_as "$ADMIN_USER" "$ADMIN_PASSWORD" -f "$DIR/classify.sql"
 
 run_as energia_api "$API_PASSWORD" -f "$DIR/api-writes.sql"
 run_as energia_data "$DATA_PASSWORD" -f "$DIR/data-writes.sql"
+run_as energia_forecast "$FORECAST_PASSWORD" -f "$DIR/forecast-writes.sql"
 echo "Database permissions OK"

@@ -22,6 +22,12 @@ secret() {
 master="$(secret "$(jq -r .rds_master <<<"$SECRETS")")"
 api_password="$(secret "$(jq -r .api_database <<<"$SECRETS")" | jq -r .password)"
 data_password="$(secret "$(jq -r .data_warehouse <<<"$SECRETS")" | jq -r .password)"
+# Optional: only set once the forecast database secret exists in the Terraform outputs.
+forecast_secret="$(jq -r '.forecast_database // empty' <<<"$SECRETS")"
+forecast_args=()
+if [ -n "$forecast_secret" ]; then
+  forecast_args=(-v "forecast_password=$(secret "$forecast_secret" | jq -r .password)")
+fi
 
 echo "Opening port forward localhost:$LOCAL_PORT -> $DB_HOST:$DB_PORT via $INSTANCE_ID"
 aws ssm start-session --region "$REGION" --target "$INSTANCE_ID" \
@@ -34,7 +40,7 @@ sleep 5
 PGPASSWORD="$(jq -r .password <<<"$master")" PGSSLMODE=require psql \
   --host 127.0.0.1 --port "$LOCAL_PORT" \
   --username "$(jq -r .username <<<"$master")" --dbname "$DB_NAME" \
-  -v api_password="$api_password" -v data_password="$data_password" \
+  -v api_password="$api_password" -v data_password="$data_password" "${forecast_args[@]}" \
   -f "$ROOT/scripts/create-db-users.sql"
 
 echo "Done."
