@@ -19,17 +19,17 @@ variable "github_owner" {
 
 variable "api_repository" {
   type    = string
-  default = "energy-api"
+  default = "spillway-api"
 }
 
 variable "data_repository" {
   type    = string
-  default = "energy-data"
+  default = "spillway-data"
 }
 
 variable "infra_repository" {
   type    = string
-  default = "energy-infra"
+  default = "spillway-infra"
 }
 
 variable "production_environment" {

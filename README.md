@@ -1,11 +1,11 @@
-# energy-infra
+# spillway-infra
 
 Terraform for the AWS infrastructure (`sa-east-1`, single account, `prod` environment) of the
 energy data platform. Phase 1: the public wind and solar curtailment monitor.
 
-The contract between the repositories is in `energy-api/docs/phase1-contract.md`. This
-repository creates the infrastructure; the database schema belongs to `energy-api` (Alembic)
-and the pipeline to `energy-data`. The portal (`energy-web`) runs on **Vercel**, outside
+The contract between the repositories is in `spillway-api/docs/phase1-contract.md`. This
+repository creates the infrastructure; the database schema belongs to `spillway-api` (Alembic)
+and the pipeline to `spillway-data`. The portal (`spillway-web`) runs on **Vercel**, outside
 Terraform.
 
 > **Naming.** The GitHub repositories are named `energy-*`. AWS resources that already exist
@@ -13,13 +13,13 @@ Terraform.
 > `energia-api/admin` scope, `/opt/energia-data` on the Airflow host, `energia-prod-*`) so that
 > renaming the repositories does not force Terraform to replace production resources.
 
-Design decisions shared by the four repositories are recorded as [ADRs](https://github.com/LeonardoMatos07/energy-api/tree/main/docs/adr).
+Design decisions shared by the four repositories are recorded as [ADRs](https://github.com/LeonardoMatos07/spillway-api/tree/main/docs/adr).
 
 ## Architecture
 
 ```mermaid
 flowchart LR
-  user([Visitor]) --> vercel[energy-web<br/>Vercel]
+  user([Visitor]) --> vercel[spillway-web<br/>Vercel]
   admin([Admin]) --> vercel
   vercel -- "server-side fetch" --> cf
   vercel -- "OAuth code + PKCE" --> cognito[Cognito<br/>user pool + hosted UI]
@@ -28,7 +28,7 @@ flowchart LR
     cf[CloudFront<br/>/v1/* cache] -- "HTTPS + X-Origin-Verify" --> alb[ALB]
     subgraph vpc [VPC 10.20.0.0/16]
       subgraph pub [Public subnets, 2 AZs]
-        alb --> ecs[ECS Fargate<br/>energy-api]
+        alb --> ecs[ECS Fargate<br/>spillway-api]
         ec2[EC2 t3.large<br/>Airflow docker-compose]
       end
       subgraph priv [Private subnets, 2 AZs]
@@ -160,7 +160,7 @@ After the apply, create the `api_domain → CloudFront` and `api_origin_domain �
 
 ### 4. API migration
 
-It needs the `energia-api:latest` image in ECR (first push from the `energy-api` CI, or a
+It needs the `energia-api:latest` image in ECR (first push from the `spillway-api` CI, or a
 manual one).
 
 ```bash
@@ -198,7 +198,7 @@ master user. It creates:
   readable automatically (default privileges); writing to a new table must be granted in the SQL.
 - `energia_data`: `SELECT, INSERT, UPDATE, DELETE` only on `plant`, `plant_monthly_curtailment`,
   `state_monthly_curtailment`, `subsystem_monthly_curtailment`, `hourly_curtailment` and
-  `load_run` (contract, "How energy-data writes"), `USAGE` on the `load_run` sequence and the
+  `load_run` (contract, "How spillway-data writes"), `USAGE` on the `load_run` sequence and the
   `TEMPORARY` privilege on the database, because every load is staged in a temporary table. It
   cannot even read the API tables (members, sessions, usage log).
 
@@ -207,16 +207,16 @@ privilege of `energia_data` before granting them, so a table removed from the li
 when the script is reapplied.
 
 **Guard against drift.** The `database-permissions` job of the CI starts a Postgres 16, applies
-the `energia-api` migrations (`main`), runs `create-db-users.sql` twice and then
+the `spillway-api` migrations (`main`), runs `create-db-users.sql` twice and then
 `scripts/db-permissions/check.sh`: it connects as `energia_api` and as `energia_data`, writes,
 updates and deletes a row in each table they own inside a transaction that is rolled back, and
 checks that the forbidden tables are refused. It fails when a table appears that
 `scripts/db-permissions/classify.sql` does not know, so a new migration cannot reach production
 without a decision about who may write to it. The `plan` job waits for it. To run it locally
-against any Postgres with the `energia-api` schema:
+against any Postgres with the `spillway-api` schema:
 `PGHOST=... PGPORT=... PGDATABASE=... ADMIN_USER=... ADMIN_PASSWORD=... bash scripts/db-permissions/check.sh`.
 
-Run it again after every `energia-api` release that adds a table: the commands are the same as the
+Run it again after every `spillway-api` release that adds a table: the commands are the same as the
 first time (below). After it, the API starts (`DATABASE_URL` uses `energia_api`): if the
 service was already retrying, force a deployment with
 `aws ecs update-service --cluster energia-prod --service energia-prod-api --force-new-deployment`.
@@ -236,7 +236,7 @@ aws cognito-idp admin-add-user-to-group --user-pool-id "$POOL" \
 The person gets a temporary password by e-mail and, on the first sign-in, changes it and sets up
 the authenticator app (mandatory MFA).
 
-### 7. Airflow (energy-data) on EC2
+### 7. Airflow (spillway-data) on EC2
 
 `user_data` installs Docker, Compose (v5.6.0, with checksum), git, jq and the CloudWatch agent,
 creates `/opt/energia-data` (owned by `ec2-user`) and installs the `energia-render-env`
@@ -255,7 +255,7 @@ The instance role reads exactly these three secrets and this parameter. The lake
 instance profile (no static keys; IMDSv2 with hop limit 2 so the containers reach the
 credentials). To rewrite `.env` without rebooting: `sudo /usr/local/bin/render-airflow-env.sh`.
 
-**Repository clone (once).** `energy-data` is public, so the instance clones it over HTTPS
+**Repository clone (once).** `spillway-data` is public, so the instance clones it over HTTPS
 with no deploy key. Open a session on the instance; the directory already exists (with `.env`
 and `logs/`), so the clone happens in place:
 
@@ -264,13 +264,13 @@ aws ssm start-session --target $(terraform output -raw airflow_instance_id)
 sudo su - ec2-user
 cd /opt/energia-data
 git init -b main
-git remote add origin https://github.com/<owner>/energy-data.git
+git remote add origin https://github.com/<owner>/spillway-data.git
 git fetch origin main && git checkout -f -t origin/main
 ```
 
-`.env` and `logs/` must be in the `energy-data` `.gitignore`.
+`.env` and `logs/` must be in the `spillway-data` `.gitignore`.
 
-**Deployment from the energy-data CI:**
+**Deployment from the spillway-data CI:**
 
 ```bash
 aws ssm send-command --document-name AWS-RunShellScript \
@@ -280,7 +280,7 @@ aws ssm send-command --document-name AWS-RunShellScript \
 
 SSM runs the command as `root`; `.env` belongs to `ec2-user` with mode 600, readable by root.
 
-`deploy.sh` (from `energy-data`) reads `.env` and runs
+`deploy.sh` (from `spillway-data`) reads `.env` and runs
 `docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d`. Airflow must expose its
 UI only on `127.0.0.1:8080` on the host and write task logs to `/opt/energia-data/logs`
 (`./logs` in the compose file), from where the CloudWatch agent ships
@@ -304,9 +304,9 @@ repository that deploys. The ARNs are in the `github_role_arns` output.
 
 | Repository | Secrets | Variables |
 |---|---|---|
-| `energy-infra` | `AWS_PLAN_ROLE_ARN` (`infra_plan`), `AWS_APPLY_ROLE_ARN` (`infra_apply`, in the `production` environment) | `TF_BACKEND_HCL` (contents of `backend.hcl`), `TF_VARS` (contents of `terraform.tfvars`; keep secrets out of it) |
-| `energy-api` | `AWS_ROLE_ARN` (`api`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-api`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_MIGRATION_TASK_DEFINITION`, `ECS_SUBNETS`, `ECS_SECURITY_GROUP` (`ecs` output) |
-| `energy-data` | `AWS_ROLE_ARN` (`data`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-data`, `AIRFLOW_INSTANCE_ID` |
+| `spillway-infra` | `AWS_PLAN_ROLE_ARN` (`infra_plan`), `AWS_APPLY_ROLE_ARN` (`infra_apply`, in the `production` environment) | `TF_BACKEND_HCL` (contents of `backend.hcl`), `TF_VARS` (contents of `terraform.tfvars`; keep secrets out of it) |
+| `spillway-api` | `AWS_ROLE_ARN` (`api`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-api`, `ECS_CLUSTER`, `ECS_SERVICE`, `ECS_MIGRATION_TASK_DEFINITION`, `ECS_SUBNETS`, `ECS_SECURITY_GROUP` (`ecs` output) |
+| `spillway-data` | `AWS_ROLE_ARN` (`data`) | `AWS_REGION=sa-east-1`, `ECR_REPOSITORY=energia-data`, `AIRFLOW_INSTANCE_ID` |
 
 The roles accept the `main` branch or the `production` environment (the token `sub` changes when
 the job uses an environment). Expected API deployment flow: build → push `:<sha>` and `:latest`
@@ -315,7 +315,7 @@ the job uses an environment). Expected API deployment flow: build → push `:<sh
 
 If the account already has the GitHub OIDC provider, set `create_github_oidc_provider = false`.
 
-### 9. Vercel (energy-web)
+### 9. Vercel (spillway-web)
 
 | Variable | Value |
 |---|---|

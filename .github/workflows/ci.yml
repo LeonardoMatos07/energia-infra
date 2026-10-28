@@ -108,17 +108,17 @@ jobs:
       ADMIN_PASSWORD: postgres
     steps:
       - uses: actions/checkout@v7.0.1
-      - name: Check out energia-api (the schema the users have to work with)
+      - name: Check out spillway-api (the schema the users have to work with)
         uses: actions/checkout@v7.0.1
         with:
-          repository: LeonardoMatos07/energia-api
+          repository: LeonardoMatos07/spillway-api
           ref: main
-          path: energia-api
+          path: spillway-api
       - uses: astral-sh/setup-uv@v10.2.0
         with:
           version: ${{ env.UV_VERSION }}
       - name: alembic upgrade head
-        working-directory: energia-api
+        working-directory: spillway-api
         env:
           DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/energia
         run: |
