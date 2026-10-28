@@ -202,13 +202,22 @@ master user. It creates:
   `TEMPORARY` privilege on the database, because every load is staged in a temporary table. It
   cannot even read the API tables (members, sessions, usage log).
 
+- `energia_forecast` (optional, created only when `forecast_password` is passed): the ML batch
+  job `spillway publish` of `spillway-forecast` (ADR 0007 in `spillway-api`). `SELECT` on the
+  warehouse tables, `INSERT, DELETE` on `forecast_model`, `forecast_run` and `forecast_hourly`,
+  and `UPDATE` only on the columns `forecast_model.is_current` and `forecast_run.status` (flip
+  the run to `ready` and the current model, inside the publishing transaction). It cannot read
+  member data or write any other table. It needs a `forecast_database` secret in the
+  Terraform `secrets` output (not created by this change) and the `spillway-api` migration
+  `0007` applied first.
+
 The script is idempotent and convergent: it resets the write privileges of `energia_api` and every
 privilege of `energia_data` before granting them, so a table removed from the list loses access
 when the script is reapplied.
 
 **Guard against drift.** The `database-permissions` job of the CI starts a Postgres 16, applies
 the `spillway-api` migrations (`main`), runs `create-db-users.sql` twice and then
-`scripts/db-permissions/check.sh`: it connects as `energia_api` and as `energia_data`, writes,
+`scripts/db-permissions/check.sh`: it connects as `energia_api`, `energia_data` and `energia_forecast`, writes,
 updates and deletes a row in each table they own inside a transaction that is rolled back, and
 checks that the forbidden tables are refused. It fails when a table appears that
 `scripts/db-permissions/classify.sql` does not know, so a new migration cannot reach production

@@ -14,6 +14,17 @@ CREATE ROLE energia_data LOGIN;
 \endif
 ALTER ROLE energia_data WITH LOGIN PASSWORD :'data_password' NOSUPERUSER NOCREATEDB NOCREATEROLE;
 
+-- energia_forecast: the ML batch job (spillway-forecast, `spillway publish`). Optional until its
+-- password exists (-v forecast_password=...), so the script keeps working without it.
+SELECT :{?forecast_password} AS with_forecast \gset
+\if :with_forecast
+SELECT NOT EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'energia_forecast') AS create_forecast \gset
+\if :create_forecast
+CREATE ROLE energia_forecast LOGIN;
+\endif
+ALTER ROLE energia_forecast WITH LOGIN PASSWORD :'forecast_password' NOSUPERUSER NOCREATEDB NOCREATEROLE;
+\endif
+
 SELECT current_database() AS dbname \gset
 REVOKE ALL ON DATABASE :"dbname" FROM PUBLIC;
 GRANT CONNECT ON DATABASE :"dbname" TO energia_api, energia_data;
@@ -58,6 +69,32 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
 TO energia_data;
 SELECT pg_get_serial_sequence('public.load_run', 'id') AS load_run_seq \gset
 GRANT USAGE, SELECT ON SEQUENCE :load_run_seq TO energia_data;
+
+-- energia_forecast: reads the warehouse tables (to reconcile) but not the member data, and writes
+-- only the three forecast tables. The publisher inserts a run, copies the hourly rows, flips the
+-- run to `ready` and moves the `is_current` flag of the model in one transaction, so it needs
+-- UPDATE on exactly those two columns and nothing else. DELETE purges old runs (forecast_hourly
+-- goes with them through ON DELETE CASCADE).
+\if :with_forecast
+GRANT CONNECT ON DATABASE :"dbname" TO energia_forecast;
+GRANT USAGE ON SCHEMA public TO energia_forecast;
+REVOKE ALL ON ALL TABLES IN SCHEMA public FROM energia_forecast;
+GRANT SELECT ON
+  public.plant,
+  public.plant_monthly_curtailment,
+  public.state_monthly_curtailment,
+  public.subsystem_monthly_curtailment,
+  public.hourly_curtailment,
+  public.load_run,
+  public.forecast_model,
+  public.forecast_run,
+  public.forecast_hourly
+TO energia_forecast;
+GRANT INSERT, DELETE ON public.forecast_model, public.forecast_run, public.forecast_hourly
+TO energia_forecast;
+GRANT UPDATE (is_current) ON public.forecast_model TO energia_forecast;
+GRANT UPDATE (status) ON public.forecast_run TO energia_forecast;
+\endif
 
 COMMIT;
 SELECT grantee, table_name, string_agg(privilege_type, ', ' ORDER BY privilege_type) AS privileges
