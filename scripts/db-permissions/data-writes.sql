@@ -84,6 +84,19 @@ INSERT INTO plant_monthly_spilled_energy (month, plant_code, plant_name, spilled
 VALUES ('2026-09-01', '99', 'Plant', 1, 1);
 DELETE FROM plant_monthly_spilled_energy WHERE month >= '2026-09-01' AND month < '2026-10-01';
 
+-- versioned snapshots: close the rows that changed, insert the new versions, undo a same-day rerun
+INSERT INTO transmission_line (equipment_code, valid_from, row_hash) VALUES ('L1', '2026-10-01', 'h1');
+UPDATE transmission_line SET valid_to = '2026-11-01' WHERE valid_to IS NULL AND equipment_code = 'L1';
+DELETE FROM transmission_line WHERE valid_from = '2026-10-01';
+
+INSERT INTO substation (station_id, valid_from, row_hash) VALUES ('S1', '2026-10-01', 'h1');
+UPDATE substation SET valid_to = '2026-11-01' WHERE valid_to IS NULL AND station_id = 'S1';
+DELETE FROM substation WHERE valid_from = '2026-10-01';
+
+INSERT INTO transformer_capacity (equipment_code, valid_from, row_hash) VALUES ('T1', '2026-10-01', 'h1');
+UPDATE transformer_capacity SET valid_to = '2026-11-01' WHERE valid_to IS NULL AND equipment_code = 'T1';
+DELETE FROM transformer_capacity WHERE valid_from = '2026-10-01';
+
 -- The pipeline must not reach the API's tables, least of all the member data.
 DO $$
 DECLARE
