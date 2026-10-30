@@ -56,6 +56,18 @@ INSERT INTO subsystem_hourly_balance (hour, subsystem, hour_utc)
 VALUES ('2026-09-01 00:00', 'NE', '2026-09-01 03:00');
 DELETE FROM subsystem_hourly_balance WHERE hour >= '2026-09-01' AND hour < '2026-10-01';
 
+INSERT INTO interchange_hourly (hour, origin, destination, scope, hour_utc)
+VALUES ('2026-09-01 00:00', 'NE', 'SE', 'national', '2026-09-01 03:00');
+DELETE FROM interchange_hourly WHERE hour >= '2026-09-01' AND hour < '2026-10-01';
+
+INSERT INTO interchange_monthly (month, origin, destination, scope, energy_mwh, avg_mw, peak_mw, min_mw)
+VALUES ('2026-09-01', 'NE', 'SE', 'national', 1, 1, 1, 1);
+DELETE FROM interchange_monthly WHERE month >= '2026-09-01' AND month < '2026-10-01';
+
+INSERT INTO thermal_dispatch_monthly (month, plant_code, reason, plant_name, subsystem, verified_mwh)
+VALUES ('2026-09-01', '201', 'total', 'Plant', 'N', 1);
+DELETE FROM thermal_dispatch_monthly WHERE month >= '2026-09-01' AND month < '2026-10-01';
+
 -- The pipeline must not reach the API's tables, least of all the member data.
 DO $$
 DECLARE
