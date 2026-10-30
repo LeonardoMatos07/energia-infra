@@ -14,7 +14,8 @@ DECLARE
                                'interchange_hourly', 'interchange_monthly', 'thermal_dispatch_monthly',
                                'reservoir', 'subsystem_storage_daily', 'reservoir_daily', 'plant_monthly_spilled_energy',
                                'transmission_line', 'substation', 'transformer_capacity',
-                               'pld_hourly', 'pld_weekly', 'pld_daily', 'pld_monthly', 'distributor', 'consumer_unit_set', 'reliability_monthly'];
+                               'pld_hourly', 'pld_weekly', 'pld_daily', 'pld_monthly', 'distributor', 'consumer_unit_set', 'reliability_monthly',
+                               'tariff_flag_monthly', 'market_consumption_monthly', 'market_agents_monthly'];
   news_writes  text[] := ARRAY['news_item', 'regulatory_act'];
   read_only    text[] := ARRAY['news_source', 'data_source'];
   forecast_writes text[] := ARRAY['forecast_model', 'forecast_run', 'forecast_hourly'];

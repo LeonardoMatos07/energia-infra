@@ -159,6 +159,17 @@ DELETE FROM reliability_monthly WHERE month >= '2026-09-01';
 DELETE FROM consumer_unit_set WHERE distributor_cnpj = '1';
 DELETE FROM distributor WHERE cnpj = '1';
 
+-- tariff flags (ANEEL) and the free market (CCEE)
+INSERT INTO tariff_flag_monthly (month, flag, additional_brl_per_mwh) VALUES ('2026-09-01', 'Amarela', 18.85);
+DELETE FROM tariff_flag_monthly WHERE month = '2026-09-01';
+
+INSERT INTO market_consumption_monthly (month, regulated_mw_avg, free_mw_avg)
+VALUES ('2026-09-01', 45000, 15000);
+DELETE FROM market_consumption_monthly WHERE month = '2026-09-01';
+
+INSERT INTO market_agents_monthly (month, agent_class, agents) VALUES ('2026-09-01', 'Comercializador', 500);
+DELETE FROM market_agents_monthly WHERE month = '2026-09-01';
+
 -- the registry of sources is owned by the migration: the pipeline must not rewrite licenses
 DO $$
 BEGIN
