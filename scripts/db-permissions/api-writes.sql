@@ -52,6 +52,35 @@ DELETE FROM usage_event WHERE action = 'page.view';
 
 DELETE FROM member WHERE id = '00000000-0000-0000-0000-0000000000b1';
 
+-- Moderation: the API may only touch the admin columns of the news tables (a WHERE false update
+-- still checks the column privileges).
+UPDATE news_item SET status = 'hidden', editor_note = 'n', editor_note_by = 'me',
+  editor_note_at = now(), related_links = '[]' WHERE false;
+UPDATE regulatory_act SET status = 'hidden' WHERE false;
+DO $$
+BEGIN
+  BEGIN
+    UPDATE news_item SET title = 'x' WHERE false;
+    RAISE EXCEPTION 'energia_api must not be able to rewrite the title of a news item';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+  BEGIN
+    DELETE FROM news_item;
+    RAISE EXCEPTION 'energia_api must not be able to delete news items';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+  BEGIN
+    INSERT INTO news_source (slug, publisher_name, homepage_url, fetch_method, license_code, license_url)
+    VALUES ('x', 'x', 'x', 'rss', 'x', 'x');
+    RAISE EXCEPTION 'energia_api must not be able to write news_source';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+END
+$$;
+
 -- The API reads everything, including the pipeline tables...
 SELECT count(*) FROM plant;
 SELECT count(*) FROM hourly_curtailment;

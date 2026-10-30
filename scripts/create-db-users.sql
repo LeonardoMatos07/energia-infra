@@ -52,6 +52,11 @@ GRANT INSERT, UPDATE, DELETE ON
   public.email_dispatch,
   public.usage_event
 TO energia_api;
+-- News: the API owns only the moderation columns (hide an item, write the editor note); the items
+-- themselves come from the pipeline.
+GRANT UPDATE (status, editor_note, editor_note_by, editor_note_at, related_links)
+  ON public.news_item TO energia_api;
+GRANT UPDATE (status) ON public.regulatory_act TO energia_api;
 GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO energia_api;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT SELECT ON TABLES TO energia_api;
 ALTER DEFAULT PRIVILEGES IN SCHEMA public GRANT USAGE, SELECT ON SEQUENCES TO energia_api;
@@ -71,6 +76,18 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.power_plant,
   public.plant_monthly_generation
 TO energia_data;
+-- News: reads the source catalog and writes the items, never the moderation columns (status,
+-- editor_*, related_links), so a re-collection cannot undo what the admin did.
+GRANT SELECT ON public.news_source TO energia_data;
+GRANT SELECT, INSERT ON public.news_item, public.regulatory_act TO energia_data;
+GRANT UPDATE (source_id, url, title, summary, published_at, source_updated_at, fetched_at,
+              content_hash, topics) ON public.news_item TO energia_data;
+GRANT UPDATE (organ, act_type, act_number, act_date, title, summary, body, dou_date, dou_section,
+              dou_edition, dou_page, dou_url, topics, content_hash, fetched_at)
+  ON public.regulatory_act TO energia_data;
+SELECT pg_get_serial_sequence('public.news_item', 'id') AS news_item_seq,
+       pg_get_serial_sequence('public.regulatory_act', 'id') AS regulatory_act_seq \gset
+GRANT USAGE, SELECT ON SEQUENCE :news_item_seq, :regulatory_act_seq TO energia_data;
 SELECT pg_get_serial_sequence('public.load_run', 'id') AS load_run_seq \gset
 GRANT USAGE, SELECT ON SEQUENCE :load_run_seq TO energia_data;
 
