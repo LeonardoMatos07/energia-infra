@@ -68,6 +68,22 @@ INSERT INTO thermal_dispatch_monthly (month, plant_code, reason, plant_name, sub
 VALUES ('2026-09-01', '201', 'total', 'Plant', 'N', 1);
 DELETE FROM thermal_dispatch_monthly WHERE month >= '2026-09-01' AND month < '2026-10-01';
 
+INSERT INTO reservoir (id, name, slug) VALUES ('R1', 'Reservoir 1', 'reservoir-1');
+INSERT INTO reservoir (id, name, slug)
+SELECT 'R1', 'Reservoir 1', 'reservoir-1'
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = now();
+INSERT INTO reservoir_daily (day, reservoir_id, storage_pct) VALUES ('2026-09-01', 'R1', 50);
+DELETE FROM reservoir_daily WHERE day >= '2026-09-01' AND day < '2026-10-01';
+DELETE FROM reservoir WHERE id = 'R1';
+
+INSERT INTO subsystem_storage_daily (day, subsystem, storage_pct) VALUES ('2026-09-01', 'SE', 50);
+DELETE FROM subsystem_storage_daily WHERE day >= '2026-09-01' AND day < '2026-10-01';
+
+INSERT INTO plant_monthly_spilled_energy (month, plant_code, plant_name, spilled_energy_mwh,
+  spilled_turbinable_energy_mwh)
+VALUES ('2026-09-01', '99', 'Plant', 1, 1);
+DELETE FROM plant_monthly_spilled_energy WHERE month >= '2026-09-01' AND month < '2026-10-01';
+
 -- The pipeline must not reach the API's tables, least of all the member data.
 DO $$
 DECLARE
