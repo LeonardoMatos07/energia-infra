@@ -97,6 +97,43 @@ INSERT INTO transformer_capacity (equipment_code, valid_from, row_hash) VALUES (
 UPDATE transformer_capacity SET valid_to = '2026-11-01' WHERE valid_to IS NULL AND equipment_code = 'T1';
 DELETE FROM transformer_capacity WHERE valid_from = '2026-10-01';
 
+INSERT INTO news_item (source_id, url, title, summary, published_at, fetched_at, content_hash, topics)
+SELECT id, 'https://example.org/n/1', 'Title', 'Summary', now(), now(), 'h1', '["outros"]'
+FROM news_source WHERE slug = 'aneel';
+INSERT INTO news_item (source_id, url, title, published_at, fetched_at, content_hash, topics)
+SELECT id, 'https://example.org/n/1', 'Title 2', now(), now(), 'h2', '[]'
+FROM news_source WHERE slug = 'aneel'
+ON CONFLICT (url) DO UPDATE SET title = EXCLUDED.title, content_hash = EXCLUDED.content_hash,
+  fetched_at = EXCLUDED.fetched_at, topics = EXCLUDED.topics;
+INSERT INTO regulatory_act (organ, act_type, title, dou_date, dou_url, topics, content_hash,
+                            fetched_at)
+VALUES ('ANEEL', 'Resolução', 'Act', '2026-09-01', 'https://example.org/dou/1', '[]', 'h', now())
+ON CONFLICT (dou_url, content_hash) DO UPDATE SET title = EXCLUDED.title;
+
+-- The moderation columns and the source catalog are not the pipeline's to write.
+DO $$
+BEGIN
+  BEGIN
+    UPDATE news_item SET status = 'hidden';
+    RAISE EXCEPTION 'energia_data must not be able to change news_item.status';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+  BEGIN
+    UPDATE news_item SET editor_note = 'x';
+    RAISE EXCEPTION 'energia_data must not be able to write news_item.editor_note';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+  BEGIN
+    UPDATE news_source SET active = false;
+    RAISE EXCEPTION 'energia_data must not be able to write news_source';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+END
+$$;
+
 -- The pipeline must not reach the API's tables, least of all the member data.
 DO $$
 DECLARE
