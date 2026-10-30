@@ -84,7 +84,14 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.plant_monthly_spilled_energy,
   public.transmission_line,
   public.substation,
-  public.transformer_capacity
+  public.transformer_capacity,
+  public.pld_hourly,
+  public.pld_weekly,
+  public.pld_daily,
+  public.pld_monthly,
+  public.distributor,
+  public.consumer_unit_set,
+  public.reliability_monthly
 TO energia_data;
 -- News: reads the source catalog and writes the items, never the moderation columns (status,
 -- editor_*, related_links), so a re-collection cannot undo what the admin did.

@@ -134,6 +134,43 @@ BEGIN
 END
 $$;
 
+-- market prices (CCEE) and quality of supply (ANEEL)
+INSERT INTO pld_hourly (hour_utc, hour, subsystem, variant, method, pld_brl_per_mwh)
+VALUES ('2026-09-01 03:00', '2026-09-01 00:00', 'SE', 'official', 'official', 100);
+DELETE FROM pld_hourly WHERE variant = 'official' AND hour >= '2026-09-01' AND hour < '2026-09-02';
+
+INSERT INTO pld_weekly (week_start, subsystem, pld_avg_brl_per_mwh) VALUES ('2026-09-05', 'SE', 100);
+DELETE FROM pld_weekly WHERE week_start = '2026-09-05';
+
+INSERT INTO pld_daily (day, subsystem, pld_avg_brl_per_mwh, pld_min_brl_per_mwh, pld_max_brl_per_mwh,
+  hours_at_floor, hours_at_cap, hours) VALUES ('2026-09-01', 'SE', 100, 57.31, 250, 0, 0, 24);
+DELETE FROM pld_daily WHERE day >= '2026-09-01';
+
+INSERT INTO pld_monthly (month, subsystem, pld_avg_brl_per_mwh, pld_min_brl_per_mwh,
+  pld_max_brl_per_mwh, hours_at_floor, hours_at_cap, hours)
+VALUES ('2026-09-01', 'SE', 100, 57.31, 250, 0, 0, 720);
+DELETE FROM pld_monthly WHERE month >= '2026-09-01';
+
+INSERT INTO distributor (cnpj, acronym) VALUES ('1', 'TEST');
+INSERT INTO consumer_unit_set (distributor_cnpj, set_id, set_name) VALUES ('1', 'a', 'Set A');
+INSERT INTO reliability_monthly (month, distributor_cnpj, set_id, consumers, dec_hours, fec_count)
+VALUES ('2026-09-01', '1', 'a', 10, 1.5, 0.5);
+DELETE FROM reliability_monthly WHERE month >= '2026-09-01';
+DELETE FROM consumer_unit_set WHERE distributor_cnpj = '1';
+DELETE FROM distributor WHERE cnpj = '1';
+
+-- the registry of sources is owned by the migration: the pipeline must not rewrite licenses
+DO $$
+BEGIN
+  BEGIN
+    UPDATE data_source SET license_code = 'x';
+    RAISE EXCEPTION 'energia_data must not be able to write data_source';
+  EXCEPTION WHEN insufficient_privilege THEN
+    NULL;
+  END;
+END
+$$;
+
 -- The pipeline must not reach the API's tables, least of all the member data.
 DO $$
 DECLARE

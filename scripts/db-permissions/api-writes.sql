@@ -95,7 +95,8 @@ BEGIN
                            'subsystem_hourly_balance', 'subsystem_monthly_generation', 'power_plant', 'plant_monthly_generation',
                            'interchange_hourly', 'interchange_monthly', 'thermal_dispatch_monthly',
                            'reservoir', 'subsystem_storage_daily', 'reservoir_daily', 'plant_monthly_spilled_energy',
-                           'transmission_line', 'substation', 'transformer_capacity']
+                           'transmission_line', 'substation', 'transformer_capacity',
+                               'pld_hourly', 'pld_weekly', 'pld_daily', 'pld_monthly', 'distributor', 'consumer_unit_set', 'reliability_monthly']
   LOOP
     BEGIN
       EXECUTE format('DELETE FROM %I', t);
