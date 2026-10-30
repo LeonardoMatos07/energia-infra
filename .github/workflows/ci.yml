@@ -32,7 +32,7 @@ jobs:
           terraform_wrapper: false
       - name: terraform fmt -check
         run: terraform fmt -recursive -check
-      - uses: terraform-linters/setup-tflint@v6.3.1
+      - uses: terraform-linters/setup-tflint@v6.3.2
         with:
           tflint_version: ${{ env.TFLINT_VERSION }}
       - name: tflint
@@ -181,7 +181,7 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
       - name: Keep the plan for apply
         if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
-        uses: actions/upload-artifact@v7.0.1
+        uses: actions/upload-artifact@v7.0.2
         with:
           name: tfplan
           path: envs/prod/tfplan
@@ -233,7 +233,7 @@ jobs:
         with:
           role-to-assume: ${{ secrets.AWS_APPLY_ROLE_ARN }}
           aws-region: ${{ vars.AWS_REGION || 'sa-east-1' }}
-      - uses: actions/download-artifact@v8.0.1
+      - uses: actions/download-artifact@v8.0.2
         with:
           name: tfplan
           path: envs/prod
