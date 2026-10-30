@@ -62,7 +62,8 @@ DECLARE
   t text;
 BEGIN
   FOREACH t IN ARRAY ARRAY['plant', 'plant_monthly_curtailment', 'state_monthly_curtailment',
-                           'subsystem_monthly_curtailment', 'hourly_curtailment', 'load_run']
+                           'subsystem_monthly_curtailment', 'hourly_curtailment', 'load_run',
+                           'subsystem_hourly_balance', 'subsystem_monthly_generation', 'power_plant', 'plant_monthly_generation']
   LOOP
     BEGIN
       EXECUTE format('DELETE FROM %I', t);

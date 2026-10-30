@@ -39,6 +39,23 @@ DELETE FROM load_run WHERE dataset = 'check';
 
 DELETE FROM plant WHERE id = 'P1';
 
+INSERT INTO power_plant (id, name, slug, source_type) VALUES ('P1', 'Plant 1', 'plant-1', 'hydro');
+INSERT INTO power_plant (id, name, slug, source_type)
+SELECT 'P1', 'Plant 1', 'plant-1', 'hydro'
+ON CONFLICT (id) DO UPDATE SET name = EXCLUDED.name, updated_at = now();
+INSERT INTO plant_monthly_generation (month, plant_id, energy_mwh, avg_mw, peak_mw)
+VALUES ('2026-09-01', 'P1', 1, 1, 1);
+DELETE FROM plant_monthly_generation WHERE month >= '2026-09-01' AND month < '2026-10-01';
+DELETE FROM power_plant WHERE id = 'P1';
+
+INSERT INTO subsystem_monthly_generation (month, subsystem, source, energy_mwh, avg_mw, peak_mw)
+VALUES ('2026-09-01', 'SIN', 'hydro', 1, 1, 1);
+DELETE FROM subsystem_monthly_generation WHERE month >= '2026-09-01' AND month < '2026-10-01';
+
+INSERT INTO subsystem_hourly_balance (hour, subsystem, hour_utc)
+VALUES ('2026-09-01 00:00', 'NE', '2026-09-01 03:00');
+DELETE FROM subsystem_hourly_balance WHERE hour >= '2026-09-01' AND hour < '2026-10-01';
+
 -- The pipeline must not reach the API's tables, least of all the member data.
 DO $$
 DECLARE

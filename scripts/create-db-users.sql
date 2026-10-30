@@ -65,7 +65,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.state_monthly_curtailment,
   public.subsystem_monthly_curtailment,
   public.hourly_curtailment,
-  public.load_run
+  public.load_run,
+  public.subsystem_hourly_balance,
+  public.subsystem_monthly_generation,
+  public.power_plant,
+  public.plant_monthly_generation
 TO energia_data;
 SELECT pg_get_serial_sequence('public.load_run', 'id') AS load_run_seq \gset
 GRANT USAGE, SELECT ON SEQUENCE :load_run_seq TO energia_data;

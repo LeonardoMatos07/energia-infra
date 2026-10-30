@@ -197,8 +197,9 @@ master user. It creates:
   login), `email_dispatch` (monthly sends) and `usage_event` (usage log). It also gets `USAGE` on every sequence. New tables become
   readable automatically (default privileges); writing to a new table must be granted in the SQL.
 - `energia_data`: `SELECT, INSERT, UPDATE, DELETE` only on `plant`, `plant_monthly_curtailment`,
-  `state_monthly_curtailment`, `subsystem_monthly_curtailment`, `hourly_curtailment` and
-  `load_run` (contract, "How spillway-data writes"), `USAGE` on the `load_run` sequence and the
+  `state_monthly_curtailment`, `subsystem_monthly_curtailment`, `hourly_curtailment`, `load_run`
+  and the ONS system tables (`subsystem_hourly_balance`, `subsystem_monthly_generation`,
+  `power_plant`, `plant_monthly_generation`) (contract, "How spillway-data writes"), `USAGE` on the `load_run` sequence and the
   `TEMPORARY` privilege on the database, because every load is staged in a temporary table. It
   cannot even read the API tables (members, sessions, usage log).
 
