@@ -10,7 +10,10 @@ DECLARE
                                'usage_event'];
   data_writes  text[] := ARRAY['plant', 'plant_monthly_curtailment', 'state_monthly_curtailment',
                                'subsystem_monthly_curtailment', 'hourly_curtailment', 'load_run',
-                               'subsystem_hourly_balance', 'subsystem_monthly_generation', 'power_plant', 'plant_monthly_generation'];
+                               'subsystem_hourly_balance', 'subsystem_monthly_generation', 'power_plant', 'plant_monthly_generation',
+                               'interchange_hourly', 'interchange_monthly', 'thermal_dispatch_monthly',
+                               'reservoir', 'subsystem_storage_daily', 'reservoir_daily', 'plant_monthly_spilled_energy',
+                               'transmission_line', 'substation', 'transformer_capacity'];
   news_writes  text[] := ARRAY['news_item', 'regulatory_act'];
   read_only    text[] := ARRAY['news_source'];
   forecast_writes text[] := ARRAY['forecast_model', 'forecast_run', 'forecast_hourly'];
