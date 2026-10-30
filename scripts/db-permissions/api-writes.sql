@@ -65,7 +65,8 @@ BEGIN
                            'subsystem_monthly_curtailment', 'hourly_curtailment', 'load_run',
                            'subsystem_hourly_balance', 'subsystem_monthly_generation', 'power_plant', 'plant_monthly_generation',
                            'interchange_hourly', 'interchange_monthly', 'thermal_dispatch_monthly',
-                           'reservoir', 'subsystem_storage_daily', 'reservoir_daily', 'plant_monthly_spilled_energy']
+                           'reservoir', 'subsystem_storage_daily', 'reservoir_daily', 'plant_monthly_spilled_energy',
+                           'transmission_line', 'substation', 'transformer_capacity']
   LOOP
     BEGIN
       EXECUTE format('DELETE FROM %I', t);
