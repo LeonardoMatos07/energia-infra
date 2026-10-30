@@ -163,6 +163,14 @@ DELETE FROM distributor WHERE cnpj = '1';
 INSERT INTO tariff_flag_monthly (month, flag, additional_brl_per_mwh) VALUES ('2026-09-01', 'Amarela', 18.85);
 DELETE FROM tariff_flag_monthly WHERE month = '2026-09-01';
 
+INSERT INTO flag_rule_month (month, rule_version, pld_min_brl_per_mwh, pld_max_brl_per_mwh, gh_mwmed,
+  gf_mwmed, gsf, pld_trigger_brl_per_mwh, green_upper_brl_per_mwh, yellow_upper_brl_per_mwh,
+  red1_upper_brl_per_mwh, flag)
+VALUES ('2026-08-01', 'check', 57.31, 758.27, 37885, 52911, 0.72, 128.67, 98.14, 246.40, 339.47,
+  'Amarela');
+UPDATE flag_rule_month SET revised_on = '2026-08-02' WHERE month = '2026-08-01';
+DELETE FROM flag_rule_month WHERE month = '2026-08-01';
+
 INSERT INTO market_consumption_monthly (month, regulated_mw_avg, free_mw_avg)
 VALUES ('2026-09-01', 45000, 15000);
 DELETE FROM market_consumption_monthly WHERE month = '2026-09-01';
