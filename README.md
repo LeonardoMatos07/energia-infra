@@ -211,7 +211,11 @@ master user. It creates:
   warehouse tables, `INSERT, DELETE` on `forecast_model`, `forecast_run` and `forecast_hourly`,
   and `UPDATE` only on the columns `forecast_model.is_current` and `forecast_run.status` (flip
   the run to `ready` and the current model, inside the publishing transaction). It cannot read
-  member data or write any other table. It needs a `forecast_database` secret in the
+  member data or write any other table. It also reads `tariff_flag_monthly`, `pld_weekly`,
+  `pld_daily`, `pld_monthly`, `subsystem_storage_daily` and `flag_rule_month`, and has `INSERT, DELETE`
+  on `flag_forecast_run`, `flag_forecast_prob`, `flag_forecast_input` and `flag_forecast_score`
+  (`UPDATE` only of `flag_forecast_run.status`); `energia_data` writes `flag_rule_month`
+  (`spillway-api` migration `0016`). It needs a `forecast_database` secret in the
   Terraform `secrets` output (not created by this change) and the `spillway-api` migration
   `0007` applied first.
 

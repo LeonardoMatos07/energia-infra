@@ -94,7 +94,8 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.reliability_monthly,
   public.tariff_flag_monthly,
   public.market_consumption_monthly,
-  public.market_agents_monthly
+  public.market_agents_monthly,
+  public.flag_rule_month
 TO energia_data;
 -- News: reads the source catalog and writes the items, never the moderation columns (status,
 -- editor_*, related_links), so a re-collection cannot undo what the admin did.
@@ -129,8 +130,23 @@ GRANT SELECT ON
   public.load_run,
   public.forecast_model,
   public.forecast_run,
-  public.forecast_hourly
+  public.forecast_hourly,
+  -- tariff-flag forecast: the inputs it reads and the tables it owns
+  public.tariff_flag_monthly,
+  public.pld_weekly,
+  public.pld_daily,
+  public.pld_monthly,
+  public.subsystem_storage_daily,
+  public.flag_rule_month,
+  public.flag_forecast_run,
+  public.flag_forecast_prob,
+  public.flag_forecast_input,
+  public.flag_forecast_score
 TO energia_forecast;
+GRANT INSERT, DELETE ON public.flag_forecast_run, public.flag_forecast_prob,
+  public.flag_forecast_input, public.flag_forecast_score
+TO energia_forecast;
+GRANT UPDATE (status) ON public.flag_forecast_run TO energia_forecast;
 GRANT INSERT, DELETE ON public.forecast_model, public.forecast_run, public.forecast_hourly
 TO energia_forecast;
 GRANT UPDATE (is_current) ON public.forecast_model TO energia_forecast;
