@@ -72,7 +72,11 @@ GRANT SELECT, INSERT, UPDATE, DELETE ON
   public.plant_monthly_generation,
   public.interchange_hourly,
   public.interchange_monthly,
-  public.thermal_dispatch_monthly
+  public.thermal_dispatch_monthly,
+  public.reservoir,
+  public.subsystem_storage_daily,
+  public.reservoir_daily,
+  public.plant_monthly_spilled_energy
 TO energia_data;
 SELECT pg_get_serial_sequence('public.load_run', 'id') AS load_run_seq \gset
 GRANT USAGE, SELECT ON SEQUENCE :load_run_seq TO energia_data;

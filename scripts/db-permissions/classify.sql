@@ -11,7 +11,8 @@ DECLARE
   data_writes  text[] := ARRAY['plant', 'plant_monthly_curtailment', 'state_monthly_curtailment',
                                'subsystem_monthly_curtailment', 'hourly_curtailment', 'load_run',
                                'subsystem_hourly_balance', 'subsystem_monthly_generation', 'power_plant', 'plant_monthly_generation',
-                               'interchange_hourly', 'interchange_monthly', 'thermal_dispatch_monthly'];
+                               'interchange_hourly', 'interchange_monthly', 'thermal_dispatch_monthly',
+                               'reservoir', 'subsystem_storage_daily', 'reservoir_daily', 'plant_monthly_spilled_energy'];
   forecast_writes text[] := ARRAY['forecast_model', 'forecast_run', 'forecast_hourly'];
   ignored      text[] := ARRAY['alembic_version'];
   unclassified text;
